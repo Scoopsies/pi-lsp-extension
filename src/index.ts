@@ -349,7 +349,6 @@ export default function lspExtension(pi: ExtensionAPI) {
       getFileSync().handleFileWrite(filePath).catch(() => {});
     },
   }));
-  pi.registerTool(createCodeActionsTool(managerProxy, treeSitterProxy));
 
   // File sync: track file reads/writes/edits
   // After writes/edits, append file-scoped error diagnostics to the tool result
