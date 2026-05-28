@@ -25,9 +25,6 @@ interface AutoDiagnosticsDeps {
 type AutoDiagnosticsRegistrationDeps = Omit<AutoDiagnosticsDeps, "waitForDiagnosticsToSettle"> &
   Partial<Pick<AutoDiagnosticsDeps, "waitForDiagnosticsToSettle">>;
 
-const waitForDiagnosticsToSettle = (): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, DIAGNOSTIC_SETTLE_DELAY_MS));
-
 export function registerAutoDiagnostics(pi: ExtensionAPI, deps: AutoDiagnosticsRegistrationDeps): void {
   const summaryDeps: AutoDiagnosticsDeps = {
     ...deps,
@@ -46,6 +43,9 @@ export function registerAutoDiagnostics(pi: ExtensionAPI, deps: AutoDiagnosticsR
     };
   });
 }
+
+const waitForDiagnosticsToSettle = (): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, DIAGNOSTIC_SETTLE_DELAY_MS));
 
 async function buildDiagnosticSummary(event: ToolResultEvent, deps: AutoDiagnosticsDeps): Promise<string | null> {
   if (!isSuccessfulChangeEvent(event)) return null;

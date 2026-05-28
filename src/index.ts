@@ -61,19 +61,15 @@ export default function lspExtension(pi: ExtensionAPI) {
     applyProjectConfig,
   });
 
-  // Register all LSP tools
-  // Tools call getManager() lazily so they work even if session_start hasn't fired
   registerTools(pi, managerProxy, treeSitterProxy, workspaceIndexProxy, getFileSync, getManagerOrNull);
+
+  registerFileSync(pi, getFileSync);
 
   registerAutoDiagnostics(pi, {
     getManager: () => state.manager,
     getProjectConfig: () => projectConfigRef.current,
   });
 
-  // File sync: track file reads/writes/edits
-  registerFileSync(pi, getFileSync);
-
-  // Update status after tool execution ends
   registerToolExecutionStatusUpdater(
     pi,
     () => state.manager,
