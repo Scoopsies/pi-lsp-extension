@@ -1,6 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { DiagnosticSeverity, type Diagnostic } from "vscode-languageserver-protocol";
-import { registerAutoDiagnostics } from "../src/diagnostics/auto-diagnostics-registry.js";
+import {
+  formatErrorSummary,
+  isLanguageEnabled,
+  registerAutoDiagnostics,
+} from "../src/diagnostics/auto-diagnostics-registry.js";
 
 type ToolResultHandler = (event: unknown) => Promise<unknown> | unknown;
 
@@ -71,27 +75,26 @@ const registerHandler = (projectConfig: ProjectConfig | null = null): ToolResult
   registerAutoDiagnostics(pi as never, {
     getManager: () => manager as never,
     getProjectConfig: () => projectConfig,
+    waitForDiagnosticsToSettle: async () => {},
   });
 
   if (!pi.toolResultHandler) throw new Error("tool_result handler was not registered");
   return pi.toolResultHandler;
 };
 
-const resolveAfterDiagnosticsSettle = async (handler: ToolResultHandler, event: unknown): Promise<unknown> => {
-  const resultPromise = Promise.resolve(handler(event));
-  await vi.runOnlyPendingTimersAsync();
-  return resultPromise;
-};
+const resolveAfterDiagnosticsSettle = async (handler: ToolResultHandler, event: unknown): Promise<unknown> =>
+  Promise.resolve(handler(event));
+
+const diagnosticAt = (index: number): Diagnostic => ({
+  severity: DiagnosticSeverity.Error,
+  range: {
+    start: { line: index, character: index + 1 },
+    end: { line: index, character: index + 2 },
+  },
+  message: `Error ${index}`,
+});
 
 describe("auto diagnostics registration", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
   it("registers a tool_result handler that appends diagnostics summary for successful write results", async () => {
     const handler = registerHandler();
 
@@ -120,5 +123,33 @@ describe("auto diagnostics registration", () => {
     const handler = registerHandler({ autoInjectDiagnostics: false });
 
     await expect(resolveAfterDiagnosticsSettle(handler, writeResult())).resolves.toBeUndefined();
+  });
+
+  it("does nothing when autoInjectDiagnostics does not include the event language", async () => {
+    const handler = registerHandler({ autoInjectDiagnostics: ["java"] });
+
+    await expect(resolveAfterDiagnosticsSettle(handler, writeResult())).resolves.toBeUndefined();
+  });
+
+  it("does nothing when event input path is missing or invalid", async () => {
+    const handler = registerHandler();
+
+    await expect(resolveAfterDiagnosticsSettle(handler, writeResult({ input: {} }))).resolves.toBeUndefined();
+    await expect(resolveAfterDiagnosticsSettle(handler, writeResult({ input: { path: "" } }))).resolves.toBeUndefined();
+  });
+
+  it("formats compact summaries with at most 10 diagnostic lines", () => {
+    const summary = formatErrorSummary("src/example.ts", Array.from({ length: 12 }, (_, index) => diagnosticAt(index)));
+
+    expect(summary).toContain("src/example.ts:1:2 error: Error 0");
+    expect(summary).toContain("src/example.ts:10:11 error: Error 9");
+    expect(summary).toContain("... and 2 more error(s)");
+    expect(summary).not.toContain("Error 10");
+  });
+
+  it("enables languages by default and honors allow lists", () => {
+    expect(isLanguageEnabled("typescript", null)).toBe(true);
+    expect(isLanguageEnabled("typescript", { autoInjectDiagnostics: ["typescript"] })).toBe(true);
+    expect(isLanguageEnabled("typescript", { autoInjectDiagnostics: ["java"] })).toBe(false);
   });
 });
