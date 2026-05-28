@@ -13,9 +13,12 @@
     "url": "https://github.com/samfoy/pi-lsp-extension"
   },
   "scripts": {
-    "clean": "echo 'nothing to clean'",
-    "build": "echo 'nothing to build'",
-    "check": "echo 'nothing to check'"
+    "clean": "rm -rf dist",
+    "build": "tsc",
+    "check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:smoke": "tsx test-tree-sitter.ts && tsx test-structural-search.ts",
+    "test:all": "npm test && npm run test:smoke"
   },
   "pi": {
     "extensions": [
@@ -34,6 +37,9 @@
     "@sinclair/typebox": "*"
   },
   "devDependencies": {
-    "typescript": "^5.5.0"
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.0",
+    "vitest": "^4.1.7"
   }
 }

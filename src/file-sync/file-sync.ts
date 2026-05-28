@@ -10,9 +10,9 @@
  */
 
 import { readFile } from "node:fs/promises";
-import { LspManager } from "./lsp-manager.js";
-import type { TreeSitterManager } from "./tree-sitter/parser-manager.js";
-import type { WorkspaceIndex } from "./tree-sitter/workspace-index.js";
+import { LspManager } from "../lsp-manager.js";
+import type { TreeSitterManager } from "../tree-sitter/parser-manager.js";
+import type { WorkspaceIndex } from "../tree-sitter/workspace-index.js";
 
 /** Callback to check if a synthetic dot operation is in progress for a URI */
 export type SyntheticDotChecker = (uri: string) => boolean;
