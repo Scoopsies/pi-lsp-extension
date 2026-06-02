@@ -28,8 +28,7 @@ import { registerTools } from "./tools/registry.js";
 import { readProjectConfig, type ProjectLspConfig } from "./config/project-config.js";
 import { applyProjectConfig } from "./config/apply-project-config.js";
 import { registerExtensionLifecycle } from "./extension/session-lifecycle.js";
-import { registerFileSync } from "./file-sync/registry.js";
-import { registerAutoDiagnostics } from "./diagnostics/auto-diagnostics-registry.js";
+import { registerToolResultPipeline } from "./tool-results/registry.js";
 import { createExtensionState } from "./extension/state.js";
 import { registerWorkspaceProvider } from "./workspace/registry.js";
 import { registerToolExecutionStatusUpdater } from "./status/tool-execution-status-registry.js";
@@ -63,9 +62,8 @@ export default function lspExtension(pi: ExtensionAPI) {
 
   registerTools(pi, managerProxy, treeSitterProxy, workspaceIndexProxy, getFileSync, getManagerOrNull);
 
-  registerFileSync(pi, getFileSync);
-
-  registerAutoDiagnostics(pi, {
+  registerToolResultPipeline(pi, {
+    getFileSync,
     getManager: () => state.manager,
     getProjectConfig: () => projectConfigRef.current,
   });

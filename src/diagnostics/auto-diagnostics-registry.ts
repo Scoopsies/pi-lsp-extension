@@ -22,26 +22,31 @@ interface AutoDiagnosticsDeps {
   waitForDiagnosticsToSettle(): Promise<void>;
 }
 
-type AutoDiagnosticsRegistrationDeps = Omit<AutoDiagnosticsDeps, "waitForDiagnosticsToSettle"> &
+export type AutoDiagnosticsRegistrationDeps = Omit<AutoDiagnosticsDeps, "waitForDiagnosticsToSettle"> &
   Partial<Pick<AutoDiagnosticsDeps, "waitForDiagnosticsToSettle">>;
 
-export function registerAutoDiagnostics(pi: ExtensionAPI, deps: AutoDiagnosticsRegistrationDeps): void {
+export async function appendAutoDiagnostics(
+  event: ToolResultEvent,
+  deps: AutoDiagnosticsRegistrationDeps,
+): Promise<{ content: ToolResultEvent["content"] } | undefined> {
   const summaryDeps: AutoDiagnosticsDeps = {
     ...deps,
     waitForDiagnosticsToSettle: deps.waitForDiagnosticsToSettle ?? waitForDiagnosticsToSettle,
   };
 
-  pi.on("tool_result", async (event: ToolResultEvent) => {
-    const summary = await buildDiagnosticSummary(event, summaryDeps);
-    if (!summary) return;
+  const summary = await buildDiagnosticSummary(event, summaryDeps);
+  if (!summary) return;
 
-    return {
-      content: [
-        ...event.content,
-        { type: "text" as const, text: summary },
-      ],
-    };
-  });
+  return {
+    content: [
+      ...event.content,
+      { type: "text" as const, text: summary },
+    ],
+  };
+}
+
+export function registerAutoDiagnostics(pi: ExtensionAPI, deps: AutoDiagnosticsRegistrationDeps): void {
+  pi.on("tool_result", async (event: ToolResultEvent) => appendAutoDiagnostics(event, deps));
 }
 
 const waitForDiagnosticsToSettle = (): Promise<void> =>
