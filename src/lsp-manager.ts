@@ -9,6 +9,7 @@ import { resolve, join, dirname } from "node:path";
 import { pathToFileURL } from "node:url";
 import { existsSync, readFileSync, readdirSync, unlinkSync } from "node:fs";
 import { spawn as spawnChild } from "node:child_process";
+import { DiagnosticSeverity } from "vscode-languageserver-protocol";
 import { LspClient } from "./lsp-client.js";
 import { type WorkspaceProvider, DefaultWorkspaceProvider } from "./workspace-provider.js";
 import { getLanguageIdFromPath } from "./shared/language-map.js";
@@ -49,6 +50,10 @@ export interface ServerStatus {
   command: string;
   running: boolean;
   diagnosticsCount: number;
+  errorsCount: number;
+  warningsCount: number;
+  infoCount: number;
+  hintsCount: number;
   /** True if using a shared daemon (vs direct spawn) */
   shared: boolean;
 }
@@ -576,9 +581,30 @@ export class LspManager {
     for (const [languageId, config] of this.serverConfigs) {
       const client = this.clients.get(languageId);
       let diagnosticsCount = 0;
+      let errorsCount = 0;
+      let warningsCount = 0;
+      let infoCount = 0;
+      let hintsCount = 0;
       if (client) {
         for (const diags of client.getAllDiagnostics().values()) {
           diagnosticsCount += diags.length;
+          for (const diagnostic of diags) {
+            switch (diagnostic.severity) {
+              case DiagnosticSeverity.Warning:
+                warningsCount += 1;
+                break;
+              case DiagnosticSeverity.Information:
+                infoCount += 1;
+                break;
+              case DiagnosticSeverity.Hint:
+                hintsCount += 1;
+                break;
+              case DiagnosticSeverity.Error:
+              default:
+                errorsCount += 1;
+                break;
+            }
+          }
         }
       }
       const daemonAlive = this.isDaemonAlive(languageId);
@@ -587,6 +613,10 @@ export class LspManager {
         command: config.command,
         running: client?.initialized === true && !client.disposed,
         diagnosticsCount,
+        errorsCount,
+        warningsCount,
+        infoCount,
+        hintsCount,
         shared: daemonAlive,
       });
     }

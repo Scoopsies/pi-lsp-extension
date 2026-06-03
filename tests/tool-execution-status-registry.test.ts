@@ -8,6 +8,10 @@ type FakeServerStatus = {
   languageId: string;
   running: boolean;
   diagnosticsCount: number;
+  errorsCount?: number;
+  warningsCount?: number;
+  infoCount?: number;
+  hintsCount?: number;
 };
 
 class FakePi {
@@ -28,10 +32,11 @@ class FakeLspManager {
   }
 }
 
-const runningStatus = (languageId: string, diagnosticsCount = 0): FakeServerStatus => ({
+const runningStatus = (languageId: string, diagnosticsCount = 0, counts: Partial<FakeServerStatus> = {}): FakeServerStatus => ({
   languageId,
   running: true,
   diagnosticsCount,
+  ...counts,
 });
 
 const stoppedStatus = (languageId: string, diagnosticsCount = 0): FakeServerStatus => ({
@@ -99,6 +104,20 @@ describe("tool execution status registry", () => {
     ]);
     expect(twoErrors.statusUpdates).toEqual([
       { color: "accent", text: "LSP: running (typescript, rust) • 2 errors" },
+    ]);
+  });
+
+  it("separates errors, warnings, info, and hints when severity counts are available", async () => {
+    const manager = new FakeLspManager([
+      runningStatus("javascript", 44, { hintsCount: 44, errorsCount: 0, warningsCount: 0, infoCount: 0 }),
+      runningStatus("rust", 3, { errorsCount: 1, warningsCount: 2, hintsCount: 0, infoCount: 0 }),
+    ]);
+    const { handler, statusUpdates } = captureToolExecutionEndHandler(manager);
+
+    await handler({}, {});
+
+    expect(statusUpdates).toEqual([
+      { color: "accent", text: "LSP: running (javascript, rust) • 1 error • 2 warnings • 44 hints" },
     ]);
   });
 });
